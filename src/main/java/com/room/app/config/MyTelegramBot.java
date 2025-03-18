@@ -225,7 +225,15 @@ public class MyTelegramBot extends TelegramLongPollingBot {
 					log.error("Expense error", e);
 				}
 			}
-
+			case "/expensesbymember" -> {
+			    if (arguments.isEmpty()) {
+			        sendResponse(chatId, "❌ Usage: /expensesbymember [Member Name]");
+			    } else {
+			        String memberName = arguments.trim();
+			        response = telegramBotService.getExpensesByMember(memberName);
+			        sendResponse(chatId, response);
+			    }
+			}
 			case "/register" -> handleRegistration(userId, chatId, parts);
 			case "/makeadmin" -> handleAdminPromotion(chatId, arguments); // ✅ Fixed here
 			case "/initadmin" -> sendResponse(chatId, telegramBotService.initAdmin(chatId));
@@ -252,8 +260,9 @@ public class MyTelegramBot extends TelegramLongPollingBot {
 				*Expenses*
 				/expense [Description], [Amount] - Add expense
 				/t - Show total expenses
-				/summary - Show expense summary
+				
 				/full -detailed expense summary
+				/expensesbymember [Name] - Show expenses for a member
 
 				*Administration*
 				/initadmin - Become first admin (private chat)

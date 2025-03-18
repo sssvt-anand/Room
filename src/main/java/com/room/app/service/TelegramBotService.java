@@ -188,26 +188,7 @@ public class TelegramBotService {
 		return text.length() > maxLength ? text.substring(0, maxLength - 3) + "..." : text;
 	}
 
-	public String getExpenseSummary() {
-		DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-		DecimalFormat df = new DecimalFormat("#.00");
-
-		return expenseRepository.findAllActive().stream().map(e -> {
-			BigDecimal cleared = e.getClearedAmount() != null ? e.getClearedAmount() : BigDecimal.ZERO;
-			String remaining = cleared.compareTo(BigDecimal.ZERO) == 0 ? "₹nu"
-					: "₹" + df.format(e.getAmount().subtract(cleared));
-
-			String lastCleared = e.getClearedAt() != null ? e.getClearedAt().format(dateTimeFormatter) : "Never";
-			String clearedBy = e.getClearedBy() != null ? e.getClearedBy().getName() : "N/A";
-
-			return String.format("""
-					📌 %s
-					Total: ₹%s | Cleared: ₹%s | Remaining: %s
-					Last cleared: %s by %s""", e.getDescription(), df.format(e.getAmount()), df.format(cleared),
-					remaining, lastCleared, clearedBy);
-		}).collect(Collectors.joining("\n\n"));
-	}
-
+	
 	public String registerMember(String[] parts, Long userId, Long chatId) { // Add userId parameter
 		if (parts.length != 2 || !parts[1].startsWith("+")) {
 			return "❌ Use: /register [Name] [+91xxxxxxxxxx]\nExample: /register Anand +917013209225";
@@ -274,100 +255,113 @@ public class TelegramBotService {
 	}
 
 	public String processExpenseReplyMessage(String messageText, Integer repliedMessageId, Long userId) {
-		try {
-			// Validate message format
-			String[] parts = messageText.trim().split("\\s+");
-			if (parts.length != 2 || !parts[1].equalsIgnoreCase("given")) {
-				return "❌ Invalid format! Use: `<amount> given`\nExample: `50 given`";
-			}
+	    try {
+	        // Validate message format
+	        String[] parts = messageText.trim().split("\\s+");
+	        if (parts.length != 2 || !parts[1].equalsIgnoreCase("given")) {
+	            return "❌ Invalid format! Use: `<amount> given`\nExample: `50 given`";
+	        }
 
-			// Parse and validate amount
-			BigDecimal amount = parseAmount(parts[0]);
-			if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-				return "❌ Amount must be positive!";
-			}
+	        // Parse and validate amount
+	        BigDecimal amount = parseAmount(parts[0]);
+	        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+	            return "❌ Amount must be positive!";
+	        }
 
-			// Verify clearing member
-			Member clearingMember = memberService.getMemberByUserId(userId)
-					.orElseThrow(() -> new SecurityException("Unregistered admin - Complete registration first"));
+	        // Verify clearing member
+	        Member clearingMember = memberService.getMemberByUserId(userId)
+	                .orElseThrow(() -> new SecurityException("Unregistered admin - Complete registration first"));
 
-			if (!clearingMember.isAdmin()) {
-				logger.warn("Non-admin clearance attempt by {}", clearingMember.getMobileNumber());
-				return "❌ Admin privileges required!\nUse /requestadmin to get access";
-			}
+	        if (!clearingMember.isAdmin()) {
+	            logger.warn("Non-admin clearance attempt by {}", clearingMember.getMobileNumber());
+	            return "❌ Admin privileges required!\nUse /requestadmin to get access";
+	        }
 
-			// Retrieve expense
-			Expense expense = expenseService.getExpenseByMessageId(repliedMessageId)
-					.orElseThrow(() -> new IllegalArgumentException("Expense not found"));
+	        // Retrieve expense
+	        Expense expense = expenseService.getExpenseByMessageId(repliedMessageId)
+	                .orElseThrow(() -> new IllegalArgumentException("Expense not found"));
 
-			// Check clearance status
-			if (expense.getRemainingAmount().compareTo(BigDecimal.ZERO) == 0) {
-				String clearedInfo = String.format("""
-						⚠️ Already fully cleared!
-						Total: ₹%.2f
-						Cleared by: %s (%s)
-						Time: %s""", expense.getAmount(), expense.getClearedBy().getName(),
-						expense.getClearedAt().format(dateTimeFormatter));
-				return clearedInfo;
-			}
+	        // Check clearance status
+	        if (expense.getRemainingAmount().compareTo(BigDecimal.ZERO) == 0) {
+	            String clearedInfo = String.format("""
+	                    ⚠️ Already fully cleared!
+	                    Total: ₹%.2f
+	                    Cleared by: %s (%s)
+	                    Time: %s""", expense.getAmount(), expense.getClearedBy().getName(),
+	                    expense.getClearedAt().format(dateTimeFormatter));
+	            return clearedInfo;
+	        }
 
-			// Validate payment amount
-			if (amount.compareTo(expense.getRemainingAmount()) > 0) {
-				return String.format("""
-						❌ Overpayment!
-						Remaining: ₹%.2f
-						Attempted: ₹%.2f""", expense.getRemainingAmount(), amount);
-			}
+	        // Process payment through service layer
+	        Expense updatedExpense = expenseService.clearExpense(
+	            expense.getId(),
+	            clearingMember.getId(),
+	            amount
+	        );
 
-			// Update payment tracking
-			BigDecimal newCleared = expense.getClearedAmount().add(amount);
-			BigDecimal newRemaining = expense.getRemainingAmount().subtract(amount);
+	        // Build response from updated expense
+	        String status = updatedExpense.isCleared() ? "FULLY CLEARED" : "PARTIALLY CLEARED";
+	        return String.format("""
+	                ✅ %s
+	                Total: ₹%.2f
+	                New Payment: ₹%.2f
+	                Total Cleared: ₹%.2f
+	                Remaining: ₹%.2f
+	                Cleared by: %s (%s)
+	                Time: %s""",
+	                status,
+	                updatedExpense.getAmount(),
+	                updatedExpense.getLastClearedAmount(),
+	                updatedExpense.getClearedAmount(),
+	                updatedExpense.getRemainingAmount(),
+	                clearingMember.getName(),
+	                clearingMember.getMobileNumber(),
+	                updatedExpense.getLastClearedAt().format(dateTimeFormatter));
 
-			expense.setClearedAmount(newCleared);
-			expense.setRemainingAmount(newRemaining);
-			expense.setCleared(newRemaining.compareTo(BigDecimal.ZERO) == 0);
-
-			// Track clearance details
-			if (expense.isCleared()) {
-				expense.setClearedBy(clearingMember);
-				expense.setClearedAt(LocalDateTime.now());
-			}
-
-			// Maintain last clearance info for partial payments
-			expense.setLastClearedBy(clearingMember);
-			expense.setLastClearedAt(LocalDateTime.now());
-
-			expenseService.saveExpense(expense);
-
-			String status = expense.isCleared() ? "FULLY CLEARED" : "PARTIALLY CLEARED";
-			return String.format("""
-					✅ %s
-					Total: ₹%.2f
-					New Payment: ₹%.2f
-					Total Cleared: ₹%.2f
-					Remaining: ₹%.2f
-					Cleared by: %s (%s)
-					Time: %s""", status, expense.getAmount(), amount, newCleared, newRemaining,
-					clearingMember.getName(), clearingMember.getMobileNumber(),
-					LocalDateTime.now().format(dateTimeFormatter));
-
-		} catch (NumberFormatException e) {
-			logger.error("Invalid amount format: {}", messageText);
-			return "❌ Invalid amount format! Use numbers only\nExample: `50` or `29.99`";
-		} catch (SecurityException e) {
-			logger.warn("Security violation: {}", e.getMessage());
-			return "❌ Security violation: " + e.getMessage();
-		} catch (IllegalArgumentException e) {
-			logger.error("Validation error: {}", e.getMessage());
-			return "❌ Validation error: " + e.getMessage();
-		} catch (Exception e) {
-			logger.error("System error clearing expense", e);
-			return "⚠️ System error: Unable to process request";
-		}
+	    } catch (NumberFormatException e) {
+	        logger.error("Invalid amount format: {}", messageText);
+	        return "❌ Invalid amount format! Use numbers only\nExample: `50` or `29.99`";
+	    } catch (SecurityException e) {
+	        logger.warn("Security violation: {}", e.getMessage());
+	        return "❌ Security violation: " + e.getMessage();
+	    } catch (ResourceNotFoundException e) {
+	        logger.error("Resource not found: {}", e.getMessage());
+	        return "❌ Error: " + e.getMessage();
+	    } catch (IllegalArgumentException e) {
+	        logger.error("Validation error: {}", e.getMessage());
+	        return "❌ Validation error: " + e.getMessage();
+	    } catch (Exception e) {
+	        logger.error("System error clearing expense", e);
+	        return "⚠️ System error: Unable to process request";
+	    }
 	}
-
 	public void saveExpense(Expense expense) {
 		expenseService.saveExpense(expense);
+	}
+	public String getExpenseSummary() {
+	    DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+	    DecimalFormat df = new DecimalFormat("#.00");
+
+	    return expenseRepository.findAllActive().stream().map(e -> {
+	        BigDecimal cleared = e.getClearedAmount() != null ? e.getClearedAmount() : BigDecimal.ZERO;
+	        String remaining = cleared.compareTo(BigDecimal.ZERO) == 0 ? "₹0.00" 
+	                : "₹" + df.format(e.getAmount().subtract(cleared));
+
+	        String lastCleared = e.getClearedAt() != null ? e.getClearedAt().format(dateTimeFormatter) : "Never";
+	        // Ensure clearedBy uses the correct name; fallback to "N/A" if null
+	        String clearedBy = e.getClearedBy() != null ? e.getClearedBy().getName() : "N/A";
+
+	        return String.format("""
+	            📌 %s
+	            Total: ₹%s | Cleared: ₹%s | Remaining: %s
+	            Last cleared: %s by %s""", 
+	            e.getDescription(), 
+	            df.format(e.getAmount()), 
+	            df.format(cleared),
+	            remaining, 
+	            lastCleared, 
+	            clearedBy);
+	    }).collect(Collectors.joining("\n\n"));
 	}
 
 	public String getDetailedExpenseSummary() {
@@ -567,4 +561,49 @@ public class TelegramBotService {
 	public static Pattern getMobilePattern() {
 		return MOBILE_PATTERN;
 	}
+	public String getExpensesByMember(String memberName) {
+	    try {
+	        List<Expense> expenses = expenseService.getExpensesByMemberName(memberName);
+	        if (expenses.isEmpty()) {
+	            return "📭 No expenses found for member: " + memberName;
+	        }
+
+	        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+	        DecimalFormat df = new DecimalFormat("#.00");
+
+	        StringBuilder response = new StringBuilder("📊 Expenses for " + memberName + ":\n\n");
+	        BigDecimal total = BigDecimal.ZERO;
+
+	        for (Expense expense : expenses) {
+	            String entry = String.format("""
+	                📌 %s
+	                💰 ₹%s | 📅 %s
+	                %s
+	                """,
+	                expense.getDescription(),
+	                df.format(expense.getAmount()),
+	                expense.getDate().format(dateFormatter),
+	                expense.getClearedAmount().compareTo(BigDecimal.ZERO) > 0 ?
+	                    "✅ Cleared: ₹" + df.format(expense.getClearedAmount()) :
+	                    "⏳ Pending"
+	            );
+
+	            if (response.length() + entry.length() > MAX_MESSAGE_LENGTH) {
+	                response.append("\n... (message truncated)");
+	                break;
+	            }
+	            response.append(entry);
+	            total = total.add(expense.getAmount());
+	        }
+
+	        response.append("\n💵 Total: ₹").append(df.format(total));
+	        return response.toString();
+
+	    } catch (Exception e) {
+	        logger.error("Error fetching expenses for member: {}", memberName, e);
+	        return "⚠️ Error: " + e.getMessage();
+	    }
+	}
+
+	
 }

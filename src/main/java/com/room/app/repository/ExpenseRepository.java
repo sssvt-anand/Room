@@ -11,16 +11,18 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.room.app.dto.Expense;
+import com.room.app.dto.PaymentHistory;
 
 @Repository
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 	@Query("SELECT e FROM Expense e WHERE e.isDeleted = 'N'")
-    List<Expense> findAllActive();
-    
-    @Query("SELECT e FROM Expense e WHERE e.isDeleted = 'N' AND e.id = :id")
-    Optional<Expense> findActiveById(@Param("id") Long id);
-    
-	 List<Expense> findByIsDeleted(String isDeleted);
+	List<Expense> findAllActive();
+
+	@Query("SELECT e FROM Expense e WHERE e.isDeleted = 'N' AND e.id = :id")
+	Optional<Expense> findActiveById(@Param("id") Long id);
+
+	List<Expense> findByIsDeleted(String isDeleted);
+
 	@Query("SELECT e.member, SUM(e.amount) FROM Expense e GROUP BY e.member")
 	List<Object[]> getTotalExpensesByMember();
 
@@ -41,6 +43,10 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 	@Query("SELECT e FROM Expense e WHERE e.date BETWEEN :startDate AND :endDate")
 	List<Expense> findByDateBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 
+	@Query("SELECT e FROM Expense e WHERE e.member.name ILIKE %:name% AND e.isDeleted = 'N'")
+	List<Expense> findByMemberNameContainingIgnoreCase(@Param("name") String name);
+
+	
 	
 
 }

@@ -18,6 +18,7 @@ import com.room.app.dto.User;
 import com.room.app.exception.AccessDeniedException;
 import com.room.app.repository.ExpenseRepository;
 import com.room.app.repository.MemberRepository;
+import com.room.app.repository.PaymentHistoryRepository;
 
 import jakarta.transaction.Transactional;
 
@@ -26,12 +27,14 @@ public class ExpenseService {
 	private final ExpenseRepository expenseRepository;
 	private final MemberService memberService;
 	private final MemberRepository memberRepository;
+	private final PaymentHistoryRepository paymentHistoryRepository;
 
 	public ExpenseService(ExpenseRepository expenseRepository, MemberService memberService,
-			MemberRepository memberRepository) {
+			MemberRepository memberRepository, PaymentHistoryRepository paymentHistoryRepository) {
 		this.expenseRepository = expenseRepository;
 		this.memberService = memberService;
 		this.memberRepository = memberRepository;
+		this.paymentHistoryRepository = paymentHistoryRepository;
 	}
 
 	public List<Expense> getAllActiveExpenses() {
@@ -147,41 +150,54 @@ public class ExpenseService {
 
 	@Transactional
 	public Expense clearExpense(Long expenseId, Long memberId, BigDecimal amount) throws ResourceNotFoundException {
-		Expense expense = expenseRepository.findById(expenseId)
-				.orElseThrow(() -> new ResourceNotFoundException("Expense not found"));
-		Member clearingMember = memberRepository.findById(memberId)
-				.orElseThrow(() -> new ResourceNotFoundException("Member not found"));
+	    // Fetch expense and member
+	    Expense expense = expenseRepository.findById(expenseId)
+	        .orElseThrow(() -> new ResourceNotFoundException("Expense not found"));
+	    
+	    Member member = memberRepository.findById(memberId)
+	        .orElseThrow(() -> new ResourceNotFoundException("Member not found"));
 
-		if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-			throw new IllegalArgumentException("Amount must be greater than zero");
+	    // Validate payment amount
+	    if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+	        throw new IllegalArgumentException("Payment amount must be positive");
+	    }
+
+		BigDecimal remainingBeforePayment = expense.getRemainingAmount();
+		if (amount.compareTo(remainingBeforePayment) > 0) {
+			throw new IllegalArgumentException(String.format("Payment amount ₹%.2f exceeds remaining balance ₹%.2f",
+					amount, remainingBeforePayment));
 		}
 
-		BigDecimal remaining = expense.getAmount().subtract(expense.getClearedAmount());
-		if (amount.compareTo(remaining) > 0) {
-			throw new IllegalArgumentException("Amount exceeds remaining balance of " + remaining);
-		}
-
-		
-		PaymentHistory payment = new PaymentHistory();
-		payment.setExpense(expense);
-		payment.setAmount(amount);
-		payment.setClearedBy(clearingMember);
-		payment.setClearedAt(LocalDateTime.now());
-
-	
+		// Update cumulative cleared amount and remaining balance
 		BigDecimal newClearedAmount = expense.getClearedAmount().add(amount);
 		expense.setClearedAmount(newClearedAmount);
-		expense.getPaymentHistories().add(payment);
+		expense.setRemainingAmount(expense.getAmount().subtract(newClearedAmount));
 
-		
-		boolean fullyCleared = newClearedAmount.compareTo(expense.getAmount()) >= 0;
-		expense.setCleared(fullyCleared);
+		// Update last payment details
+		expense.setLastClearedAmount(amount); // Track individual payment
+		expense.setLastClearedBy(member);
+		expense.setLastClearedAt(LocalDateTime.now());
 
-		if (fullyCleared) {
-			expense.setClearedBy(clearingMember);
+		// Mark as fully cleared if applicable
+		if (expense.getRemainingAmount().compareTo(BigDecimal.ZERO) == 0) {
+			expense.setCleared(true);
+			expense.setClearedBy(member);
 			expense.setClearedAt(LocalDateTime.now());
 		}
 
+		// Record payment history
+		PaymentHistory payment = new PaymentHistory();
+		payment.setAmount(amount);
+		payment.setClearedBy(member);
+		payment.setTimestamp(LocalDateTime.now());
+		payment.setExpense(expense);
+		paymentHistoryRepository.save(payment); // Use the correct repository
+
 		return expenseRepository.save(expense);
 	}
+
+	public List<Expense> getExpensesByMemberName(String memberName) {
+		return expenseRepository.findByMemberNameContainingIgnoreCase(memberName);
+	}
+
 }

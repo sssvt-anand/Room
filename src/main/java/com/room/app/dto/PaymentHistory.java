@@ -2,7 +2,6 @@ package com.room.app.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -26,6 +25,13 @@ public class PaymentHistory {
 	@JoinColumn(name = "member_id")
 	private Member clearedBy;
 
+	private LocalDateTime timestamp; // Renamed from 'clearedAt' for consistency
+
+	// No-arg constructor (required by JPA)
+	public PaymentHistory() {
+	}
+
+	// Getters and Setters
 	public Long getId() {
 		return id;
 	}
@@ -58,14 +64,12 @@ public class PaymentHistory {
 		this.clearedBy = clearedBy;
 	}
 
-	public LocalDateTime getClearedAt() {
-		return clearedAt;
+	public LocalDateTime getTimestamp() {
+		return timestamp;
 	}
 
-	public void setClearedAt(LocalDateTime clearedAt) {
-		this.clearedAt = clearedAt;
+	public void setTimestamp(LocalDateTime timestamp) {
+		this.timestamp = timestamp;
 	}
-
-	private LocalDateTime clearedAt;
 
 }

@@ -52,27 +52,21 @@ public class ExpenseController<ExpenseResponse> {
 	public ResponseEntity<Expense> createExpense(@RequestBody ExpenseRequest request) throws ResourceNotFoundException {
 		return new ResponseEntity<>(expenseService.addExpense(request), HttpStatus.CREATED);
 	}
-	@GetMapping("/summary")
-    public ResponseEntity<Map<String, Map<String, BigDecimal>>> getMemberBalances() {
-        Map<String, BigDecimal> totalMap = expenseService.getExpenseSummaryByMember();
-        Map<String, BigDecimal> clearedMap = expenseService.getClearedSummaryByMember();
 
-        Map<String, Map<String, BigDecimal>> result = totalMap.entrySet().stream()
-            .collect(Collectors.toMap(
-                Map.Entry::getKey,
-                entry -> {
-                    BigDecimal total = entry.getValue();
-                    BigDecimal cleared = clearedMap.getOrDefault(entry.getKey(), BigDecimal.ZERO);
-                    return Map.of(
-                        "total", total,
-                        "cleared", cleared,
-                        "remaining", total.subtract(cleared)
-                    );
-                }
-            ));
-        
-        return ResponseEntity.ok(result);
-    }
+	@GetMapping("/summary")
+	public ResponseEntity<Map<String, Map<String, BigDecimal>>> getMemberBalances() {
+		Map<String, BigDecimal> totalMap = expenseService.getExpenseSummaryByMember();
+		Map<String, BigDecimal> clearedMap = expenseService.getClearedSummaryByMember();
+
+		Map<String, Map<String, BigDecimal>> result = totalMap.entrySet().stream()
+				.collect(Collectors.toMap(Map.Entry::getKey, entry -> {
+					BigDecimal total = entry.getValue();
+					BigDecimal cleared = clearedMap.getOrDefault(entry.getKey(), BigDecimal.ZERO);
+					return Map.of("total", total, "cleared", cleared, "remaining", total.subtract(cleared));
+				}));
+
+		return ResponseEntity.ok(result);
+	}
 
 	@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 	@PutMapping("/{id}")
@@ -104,14 +98,16 @@ public class ExpenseController<ExpenseResponse> {
 
 	@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 	@PutMapping("/clear/{expenseId}")
-	public ResponseEntity<?> clearExpense(@PathVariable Long expenseId, @RequestParam("memberId") Long memberId,
-			@RequestParam("amount") BigDecimal amount) {
-		try {
-			Expense clearedExpense = expenseService.clearExpense(expenseId, memberId, amount);
-			return ResponseEntity.ok(clearedExpense);
-		} catch (ResourceNotFoundException | IllegalArgumentException | IllegalStateException e) {
-			return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-		}
+	public ResponseEntity<?> clearExpense(
+	    @PathVariable Long expenseId,
+	    @RequestParam("memberId") Long memberId,
+	    @RequestParam("amount") BigDecimal amount
+	) throws ResourceNotFoundException {
+	    try {
+	        Expense clearedExpense = expenseService.clearExpense(expenseId, memberId, amount);
+	        return ResponseEntity.ok(clearedExpense);
+	    } catch (IllegalArgumentException | IllegalStateException e) { // Remove ResourceNotFoundException
+	        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+	    }
 	}
-
 }
