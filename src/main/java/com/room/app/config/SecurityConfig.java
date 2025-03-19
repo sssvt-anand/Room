@@ -75,6 +75,7 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.GET, "/auth/users/**").hasAnyRole("USER", "ADMIN") // ALLOW BOTH
 						.requestMatchers(HttpMethod.PUT, "/auth/update/**").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.DELETE, "/api/expenses/**").hasRole("ADMIN")
+					        .requestMatchers(HttpMethod.PUT, "/api/expenses/clear/**").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.PUT, "/api/expenses/**").hasRole("ADMIN").anyRequest()
 						.authenticated())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
