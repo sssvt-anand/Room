@@ -199,5 +199,9 @@ public class ExpenseService {
 	public List<Expense> getExpensesByMemberName(String memberName) {
 		return expenseRepository.findByMemberNameContainingIgnoreCase(memberName);
 	}
+	public List<PaymentHistory> getPaymentHistoryByExpense(Long expenseId) {
+	    return paymentHistoryRepository.findByExpenseId(expenseId);
+	}
 
+	
 }

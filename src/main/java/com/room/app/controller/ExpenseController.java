@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.room.app.dto.Expense;
 import com.room.app.dto.ExpenseRequest;
+import com.room.app.dto.PaymentHistory;
 import com.room.app.dto.User;
 import com.room.app.exception.AccessDeniedException;
 import com.room.app.repository.UserRepository;
@@ -109,5 +110,10 @@ public class ExpenseController<ExpenseResponse> {
 	    } catch (IllegalArgumentException | IllegalStateException e) { // Remove ResourceNotFoundException
 	        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
 	    }
+	}
+	@GetMapping("/{expenseId}/payments")
+	public ResponseEntity<List<PaymentHistory>> getPaymentHistory(@PathVariable Long expenseId) {
+	    List<PaymentHistory> payments = expenseService.getPaymentHistoryByExpense(expenseId);
+	    return ResponseEntity.ok(payments);
 	}
 }
