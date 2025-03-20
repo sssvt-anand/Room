@@ -71,11 +71,10 @@ public class SecurityConfig {
 		http.csrf(AbstractHttpConfigurer::disable).cors(cors -> cors.configurationSource(corsConfigurationSource()))
 				.authorizeHttpRequests(auth -> auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						.requestMatchers("/auth/login", "/auth/register", "/auth/logout").permitAll()
-						.requestMatchers("/api/expenses/**", "/api/exports/**", "/api/members/**").permitAll()
-						.requestMatchers(HttpMethod.GET, "/auth/users/**").hasAnyRole("USER", "ADMIN") // ALLOW BOTH
+						.requestMatchers("/api/expenses/**", "/api/exports/**", "/api/members/**","/auth/users/**").permitAll()
 						.requestMatchers(HttpMethod.PUT, "/auth/update/**").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.DELETE, "/api/expenses/**").hasRole("ADMIN")
-					        .requestMatchers(HttpMethod.PUT, "/api/expenses/clear/**").hasRole("ADMIN")
+						.requestMatchers(HttpMethod.PUT, "/api/expenses/clear/**").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.PUT, "/api/expenses/**").hasRole("ADMIN").anyRequest()
 						.authenticated())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -85,7 +84,6 @@ public class SecurityConfig {
 
 		return http.build();
 	}
-
 	// Create JWT filter without @Bean
 	private JwtAuthenticationFilter jwtAuthenticationFilter(UserDetailsService userDetailsService) {
 		return new JwtAuthenticationFilter(jwtUtil, userDetailsService);
