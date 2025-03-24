@@ -92,7 +92,7 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000",
+		configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000","http://192.168.29.165:3000",
 				"https://room-react-anands-projects-607fcd69.vercel.app",
 				"https://room-react-agazw6jv8-anands-projects-607fcd69.vercel.app", "https://roomtracker.fun"));
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
