@@ -30,8 +30,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.room.app.dto.User;
 import com.room.app.repository.UserRepository;
 
-import jakarta.servlet.http.HttpServletResponse;
-
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -39,7 +37,7 @@ public class SecurityConfig {
 	private final JwtUtil jwtUtil;
 	private static final List<String> ALLOWED_ORIGINS = Arrays.asList("http://localhost:3000","http://localhost:3001","http://192.168.29.165:3001",
 			"https://room-react-git-master-anands-projects-607fcd69.vercel.app",
-			"https://room-react-h0aj1lmb1-anands-projects-607fcd69.vercel.app", 
+			"https://room-react-h0aj1lmb1-anands-projects-607fcd69.vercel.app", "https://pwamobile.vercel.app","https://pwamobile-anands-projects-607fcd69.vercel.app",
 			"https://roomtracker.fun","https://react-fornend.vercel.app","https://react-fornend.vercel.app");
 
 	public SecurityConfig(JwtUtil jwtUtil) {
@@ -118,7 +116,7 @@ public class SecurityConfig {
 		configuration.setExposedHeaders(Arrays.asList("Authorization"));
 
 		configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000","http://192.168.29.165:3000",
-				"https://room-react-anands-projects-607fcd69.vercel.app","https://pwamobile.vercel.app","https://pwamobile-anands-projects-607fcd69.vercel.app"
+				"https://room-react-anands-projects-607fcd69.vercel.app","https://pwamobile.vercel.app","https://pwamobile-anands-projects-607fcd69.vercel.app",
 				"https://room-react-agazw6jv8-anands-projects-607fcd69.vercel.app", "https://roomtracker.fun"));
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(Arrays.asList("*"));
