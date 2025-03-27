@@ -102,7 +102,11 @@ public class SecurityConfig {
 
 		return http.build();
 	}
+<<<<<<< HEAD
 
+=======
+	// Create JWT filter without @Bean
+>>>>>>> 0dd46dcff18fe64acbf297ee5488609dff8f8efe
 	private JwtAuthenticationFilter jwtAuthenticationFilter(UserDetailsService userDetailsService) {
 		return new JwtAuthenticationFilter(jwtUtil, userDetailsService);
 	}
@@ -110,11 +114,19 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
+<<<<<<< HEAD
 		configuration.setAllowedOrigins(ALLOWED_ORIGINS);
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
 		configuration
 				.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type", "X-Requested-With"));
 		configuration.setExposedHeaders(Arrays.asList("Authorization"));
+=======
+		configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000","http://192.168.29.165:3000",
+				"https://room-react-anands-projects-607fcd69.vercel.app",
+				"https://room-react-agazw6jv8-anands-projects-607fcd69.vercel.app", "https://roomtracker.fun"));
+		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+		configuration.setAllowedHeaders(Arrays.asList("*"));
+>>>>>>> 0dd46dcff18fe64acbf297ee5488609dff8f8efe
 		configuration.setAllowCredentials(true);
 		configuration.setMaxAge(3600L); // 1 hour
 
