@@ -5,6 +5,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -52,34 +56,42 @@ public class AuthController {
 	private final UserService userService;
 	private final UserRepository userRepository;
 
+	private final AuthenticationManager authenticationManager;
+
 	@Autowired
 	public AuthController(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
 			UserService userService, // Add this
-			UserRepository userRepository // Add this
+			UserRepository userRepository, AuthenticationManager authenticationManager // Add this
 	) {
 		this.userDetailsService = userDetailsService;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtUtil = jwtUtil;
 		this.userService = userService;
 		this.userRepository = userRepository;
+		this.authenticationManager = authenticationManager;
 	}
 
 	@PostMapping("/login")
 	public ResponseEntity<?> login(@RequestBody User user) {
 		try {
-			UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
+			// Authenticate using Spring Security's authentication manager
+			Authentication authentication = authenticationManager
+					.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
 
-			// Extract clean role
+			// Only proceed if authentication succeeds
+			UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
 			String role = userDetails.getAuthorities().stream().findFirst().map(GrantedAuthority::getAuthority)
 					.orElse("ROLE_USER").replace("ROLE_", "");
 
 			String token = jwtUtil.generateToken(userDetails);
 
 			return ResponseEntity.ok().header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-					.body(Map.of("token", token, "username", userDetails.getUsername(), "role", role // Send clean role
-					));
-		} catch (BadCredentialsException | UsernameNotFoundException e) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+					.body(Map.of("token", token, "username", userDetails.getUsername(), "role", role));
+		} catch (BadCredentialsException e) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
+		} catch (AuthenticationException e) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Authentication failed");
 		}
 	}
 

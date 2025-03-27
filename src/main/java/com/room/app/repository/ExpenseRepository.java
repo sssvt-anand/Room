@@ -17,6 +17,7 @@ import com.room.app.dto.PaymentHistory;
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 	@Query("SELECT e FROM Expense e WHERE e.isDeleted = 'N'")
 	List<Expense> findAllActive();
+	  Optional<Expense> findById(Long id);
 
 	@Query("SELECT e FROM Expense e WHERE e.isDeleted = 'N' AND e.id = :id")
 	Optional<Expense> findActiveById(@Param("id") Long id);

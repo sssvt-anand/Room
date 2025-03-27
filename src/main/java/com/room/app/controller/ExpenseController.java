@@ -98,22 +98,30 @@ public class ExpenseController<ExpenseResponse> {
 	}
 
 	@PreAuthorize("hasAuthority('ROLE_ADMIN')")
-	@PutMapping("/clear/{expenseId}")
-	public ResponseEntity<?> clearExpense(
-	    @PathVariable Long expenseId,
-	    @RequestParam("memberId") Long memberId,
-	    @RequestParam("amount") BigDecimal amount
-	) throws ResourceNotFoundException {
-	    try {
-	        Expense clearedExpense = expenseService.clearExpense(expenseId, memberId, amount);
-	        return ResponseEntity.ok(clearedExpense);
-	    } catch (IllegalArgumentException | IllegalStateException e) { // Remove ResourceNotFoundException
-	        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-	    }
-	}
+    @PutMapping("/clear/{expenseId}")
+    public ResponseEntity<?> clearExpense(
+        @PathVariable Long expenseId,
+        @RequestParam("memberId") Long memberId,
+        @RequestParam("amount") BigDecimal amount
+    ) {
+        try {
+            Expense clearedExpense = expenseService.clearExpense(expenseId, memberId, amount);
+            return ResponseEntity.ok(clearedExpense);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Expense not found", "details", e.getMessage()));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid request", "details", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "Server error", "details", e.getMessage()));
+        }
+    }
 	@GetMapping("/{expenseId}/payments")
 	public ResponseEntity<List<PaymentHistory>> getPaymentHistory(@PathVariable Long expenseId) {
 	    List<PaymentHistory> payments = expenseService.getPaymentHistoryByExpense(expenseId);
 	    return ResponseEntity.ok(payments);
 	}
+	
 }
