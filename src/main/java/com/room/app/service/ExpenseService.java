@@ -205,6 +205,11 @@ public class ExpenseService {
 	    return paymentHistoryRepository.findByExpenseId(expenseId);
 	}
 
+	public Expense getExpenseById(Long id) throws ResourceNotFoundException {
+	    return expenseRepository.findById(id)
+	        .orElseThrow(() -> new ResourceNotFoundException("Expense not found with id: " + id));
+	}
+
 	
 	
 }
