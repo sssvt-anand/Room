@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.room.app.dto.Expense;
 import com.room.app.dto.ExpenseRequest;
@@ -123,5 +124,14 @@ public class ExpenseController<ExpenseResponse> {
 	    List<PaymentHistory> payments = expenseService.getPaymentHistoryByExpense(expenseId);
 	    return ResponseEntity.ok(payments);
 	}
+	@GetMapping("/{id}")
+    public ResponseEntity<Expense> getExpenseById(@PathVariable Long id) throws com.room.app.service.ResourceNotFoundException {
+        try {
+            Expense expense = expenseService.getExpenseById(id);
+            return ResponseEntity.ok(expense);
+        } catch (ResourceNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
+        }
+    }
 	
 }
