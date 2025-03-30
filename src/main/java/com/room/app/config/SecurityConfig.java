@@ -36,7 +36,7 @@ public class SecurityConfig {
 
 	private final JwtUtil jwtUtil;
 	private static final List<String> ALLOWED_ORIGINS = Arrays.asList("http://localhost:3000","https://pwamobile.onrender.com",
-			"https://room-react-git-master-anands-projects-607fcd69.vercel.app",
+			"https://room-react-git-master-anands-projects-607fcd69.vercel.app","https://room-tracker-pwa.vercel.app","https://room-tracker-pwa-git-main-anands-projects-607fcd69.vercel.app",
 			"https://room-react-h0aj1lmb1-anands-projects-607fcd69.vercel.app", "https://pwamobile-4fnu.vercel.app","https://pwamobile-4fnu-git-main-anands-projects-607fcd69.vercel.app",
 			"https://roomtracker.fun","https://react-fornend.vercel.app","https://react-fornend.vercel.app");
 
@@ -117,6 +117,7 @@ public class SecurityConfig {
 
 		configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000","https://pwamobile.onrender.com",
 				"https://room-react-anands-projects-607fcd69.vercel.app","https://pwamobile-4fnu.vercel.app","https://pwamobile-4fnu-git-main-anands-projects-607fcd69.vercel.app",
+				"https://room-tracker-pwa.vercel.app","https://room-tracker-pwa-git-main-anands-projects-607fcd69.vercel.app",
 				"https://room-react-agazw6jv8-anands-projects-607fcd69.vercel.app", "https://roomtracker.fun"));
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(Arrays.asList("*"));
